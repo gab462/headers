@@ -28,8 +28,6 @@ main (int argc, char** argv) -> int {
     bld.flags.push_back ("-o");
     bld.flags.push_back ("build");
 
-    bld.include ("../headers");
-
     bld.run ();
   }
 

@@ -49,11 +49,11 @@ parser :: string_option (char c, std::string_view default_value) -> std::string_
   return std::get<std::string_view> (this->options.back ().value);
 }
 
-// FIXME: visiting variant without needing helpers
-template<class... Ts>
-struct overloaded : Ts... { using Ts::operator()...; };
-template<class... Ts>
-overloaded(Ts...) -> overloaded<Ts...>;
+// FIXME: visiting variant without helpers
+template <class ...Ts>
+struct overloaded: Ts... { using Ts::operator()...; };
+template <class... Ts>
+overloaded (Ts...) -> overloaded<Ts...>;
 
 auto
 parser :: parse (int argc, char** argv) -> void {
@@ -72,14 +72,14 @@ parser :: parse (int argc, char** argv) -> void {
           continue;
 
         std::visit (overloaded {
-          [&] (bool& toggle) {
+          [&] (bool& toggle) -> void {
             toggle = !toggle;
           },
-          [&] (int& number) {
+          [&] (int& number) -> void {
             assert (i + 1 < argc);
             number = std::stoi (argv[++i]);
           },
-          [&] (std::string_view& string) {
+          [&] (std::string_view& string) -> void {
             assert (i + 1 < argc);
             string = argv[++i];
           }

@@ -130,7 +130,7 @@ renderer :: ~ renderer () {
 auto
 renderer :: size () -> SDL_Point {
   int w, h;
-  SDL_GetRendererOutputSize(this->rend, &w, &h);
+  SDL_GetRendererOutputSize (this->rend, &w, &h);
   return { w, h };
 }
 
