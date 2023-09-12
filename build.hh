@@ -15,6 +15,17 @@ struct cmd {
   auto execute () -> void;
 };
 
+cmd :: cmd (): program {nullptr}, args {} {}
+
+template <typename ...A>
+cmd :: cmd (const char* c, A... a): program {c}, args {c, a..., nullptr} {}
+
+auto
+cmd :: execute () -> void {
+  // FIXME: Any way other than const_cast?
+  execvp (program, const_cast<char* const*>(args.data ()));
+}
+
 struct config { // Unibuild
   const char* compiler = "c++";
   const char* standard = "17";
@@ -31,17 +42,6 @@ struct config { // Unibuild
   auto define (std::string_view macro) -> void;
   auto run () -> void;
 };
-
-cmd :: cmd (): program {nullptr}, args {} {}
-
-template <typename ...A>
-cmd :: cmd (const char* c, A... a): program {c}, args {c, a..., nullptr} {}
-
-auto
-cmd :: execute () -> void {
-  // FIXME: Any way other than const_cast?
-  execvp (program, const_cast<char* const*>(args.data ()));
-}
 
 config :: config (const char* file): entry {file} {
   this->flags.push_back ("-Wall");
