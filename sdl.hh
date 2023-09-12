@@ -3,6 +3,7 @@
 #include <array>
 #include <list>
 #include <functional>
+#include <variant>
 #include <cassert>
 
 #include <SDL.h>
@@ -46,53 +47,23 @@ enum type {
   total
 };
 
-union data {
-  struct {
-    char key;
-  } key_pressed;
-
-  struct {
-    size_t x, y;
-  } clicked;
-
-  struct {
-    size_t w, h;
-  } window_resized;
-
-  struct {
-    uint64_t dt;
-  } frame_tick;
+struct key_pressed {
+  int key;
 };
 
-auto
-key_pressed (char key) -> data {
-  data d;
-  d.key_pressed.key = key;
-  return d;
-}
+struct clicked {
+  int x, y;
+};
 
-auto
-clicked (size_t x, size_t y) -> data {
-  data d;
-  d.clicked.x = x;
-  d.clicked.y = y;
-  return d;
-}
+struct window_resized {
+  int w, h;
+};
 
-auto
-window_resized (size_t w, size_t h) -> data {
-  data d;
-  d.window_resized.w = w;
-  d.window_resized.h = h;
-  return d;
-}
+struct frame_tick {
+  uint64_t dt;
+};
 
-auto
-frame_tick (uint64_t dt) -> data {
-  data d;
-  d.frame_tick.dt = dt;
-  return d;
-}
+using data = std::variant<key_pressed, clicked, window_resized, frame_tick>;
 
 }
 
@@ -174,7 +145,7 @@ app :: loop (std::function<void(renderer&)> render_fn) -> void {
 
   auto [w, h] = this->rend.size ();
   for (auto fn: this->fns[event::type::window_resize])
-    fn (event::window_resized (w, h));
+    fn (event::window_resized {w, h});
 
   this->keyboard_state = SDL_GetKeyboardState (NULL);
 
@@ -189,17 +160,17 @@ app :: loop (std::function<void(renderer&)> render_fn) -> void {
       switch (e.type) {
       case SDL_KEYDOWN:
         for (auto fn: this->fns[event::type::key_press])
-          fn (event::key_pressed (e.key.keysym.sym));
+          fn (event::key_pressed {e.key.keysym.sym});
         break;
       case SDL_MOUSEBUTTONDOWN:
         for (auto fn: this->fns[event::type::click])
-          fn (event::clicked (e.button.x, e.button.y));
+          fn (event::clicked {e.button.x, e.button.y});
         break;
       case SDL_WINDOWEVENT:
         if (e.window.event != SDL_WINDOWEVENT_SIZE_CHANGED)
           break;
         for (auto fn: this->fns[event::type::window_resize])
-          fn (event::window_resized (e.window.data1, e.window.data2));
+          fn (event::window_resized {e.window.data1, e.window.data2});
         break;
       case SDL_QUIT:
         return;
@@ -209,7 +180,7 @@ app :: loop (std::function<void(renderer&)> render_fn) -> void {
     }
 
     for (auto fn: this->fns[event::type::frame])
-      fn (event::frame_tick (dt));
+      fn (event::frame_tick {dt});
 
     render_fn (this->rend);
 

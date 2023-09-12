@@ -36,7 +36,7 @@ main (int argc, char** argv) -> int {
   walls[wall::player].data.h = 20;
 
   app.subscribe (sdl::event::window_resize, [&] (sdl::event::data data) -> void {
-    auto [w, h] = data.window_resized;
+    auto [w, h] = std::get<sdl::event::window_resized> (data);
 
     walls[wall::player].data.y = h - 100;
 
@@ -49,8 +49,9 @@ main (int argc, char** argv) -> int {
   });
 
   app.subscribe (sdl::event::frame, [&] (sdl::event::data data) -> void {
+    auto ticks = std::get<sdl::event::frame_tick> (data);
+    auto dt = static_cast<float> (ticks.dt);
     using sdl::collision;
-    float dt = static_cast<float> (data.frame_tick.dt);
 
     for (auto& w: walls) {
       switch (ball.body.collide (w)) {
@@ -77,7 +78,8 @@ main (int argc, char** argv) -> int {
 
   app.subscribe (sdl::event::frame, [&] (sdl::event::data data) -> void {
     // TODO: wrap
-    float dt = static_cast<float> (data.frame_tick.dt);
+    auto ticks = std::get<sdl::event::frame_tick> (data);
+    auto dt = static_cast<float> (ticks.dt);
 
     if (app.keyboard_state[SDL_SCANCODE_A])
       walls[wall::player].data.x -= dt;
