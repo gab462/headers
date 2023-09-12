@@ -1,5 +1,3 @@
-// TODO: cleanup for multiple scenes
-
 #include <array>
 #include <list>
 #include <functional>
@@ -125,31 +123,36 @@ renderer :: show () -> void {
   SDL_RenderPresent (this->rend);
 }
 
-struct app {
-  renderer rend;
+struct event_manager {
+  bool running;
   const uint8_t* keyboard_state;
   std::array<std::list<std::function<void(event::data)>>, event::type::total> fns;
 
+  event_manager ();
+
   auto subscribe (event::type type, std::function<void(event::data)> fn) -> void;
-  auto loop (std::function<void(renderer&)> renderer_fn) -> void;
+  auto loop (renderer& rend, std::function<void(renderer&)> renderer_fn) -> void;
 };
 
+event_manager :: event_manager (): running {true}, keyboard_state {nullptr}, fns {} {}
+
 auto
-app :: subscribe (event::type type, std::function<void(event::data)> fn) -> void {
+event_manager :: subscribe (event::type type, std::function<void(event::data)> fn) -> void {
   this->fns[type].push_back (fn);
 }
 
 auto
-app :: loop (std::function<void(renderer&)> render_fn) -> void {
-  auto [w, h] = this->rend.size ();
+event_manager :: loop (renderer& rend, std::function<void(renderer&)> render_fn) -> void {
+  this->keyboard_state = SDL_GetKeyboardState (NULL);
+
+  auto [w, h] = rend.size ();
   for (auto fn: this->fns[event::type::window_resize])
     fn (event::window_resized {w, h});
 
-  this->keyboard_state = SDL_GetKeyboardState (NULL);
   uint64_t prev = 0;
   SDL_Event e;
 
-  for (;;) {
+  while (this->running) {
     uint64_t now = SDL_GetTicks64 ();
     uint64_t dt = now - prev;
     prev = now;
@@ -180,9 +183,9 @@ app :: loop (std::function<void(renderer&)> render_fn) -> void {
     for (auto fn: this->fns[event::type::frame])
       fn (event::frame_tick {static_cast<float> (dt)});
 
-    render_fn (this->rend);
+    render_fn (rend);
 
-    this->rend.show ();
+    rend.show ();
   }
 }
 

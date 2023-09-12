@@ -23,7 +23,8 @@ enum wall {
 auto
 main (int argc, char** argv) -> int {
   using game::wall;
-  sdl::app app;
+  sdl::renderer renderer;
+  sdl::event_manager app;
   std::array<sdl::rect, wall::total> walls {};
   game::ball ball;
 
@@ -95,7 +96,7 @@ main (int argc, char** argv) -> int {
       r.draw_rect (w);
   };
 
-  app.loop (render);
+  app.loop (renderer, render);
 
   return 0;
 }
