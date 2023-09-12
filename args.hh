@@ -1,25 +1,23 @@
 #include <string>
 #include <list>
+#include <variant>
 #include <cassert>
 
 namespace args {
 
-template <typename T>
 struct arg {
-  T data;
-  char option;
+  char c;
+  std::variant<bool, int, std::string_view> value;
 };
 
 struct parser {
   std::list<std::string_view> inputs;
-  std::list<arg<bool>> flags;
-  std::list<arg<int>> int_options;
-  std::list<arg<std::string_view>> str_options;
+  std::list<arg> options;
 
   auto input () -> std::string_view&;
-  auto flag (char option, bool default_value = false) -> bool&;
-  auto int_option (char option, int default_value = 0) -> int&;
-  auto string_option (char option, std::string_view default_value = "") -> std::string_view&;
+  auto flag (char c, bool default_value = false) -> bool&;
+  auto number_option (char c, int default_value = 0) -> int&;
+  auto string_option (char c, std::string_view default_value = "") -> std::string_view&;
   auto parse (int argc, char** argv) -> void;
 };
 
@@ -31,34 +29,31 @@ parser :: input () -> std::string_view& {
 }
 
 auto
-parser :: flag (char option, bool default_value) -> bool& {
-  this->flags.push_back ({
-    default_value,
-    option,
-  });
+parser :: flag (char c, bool default_value) -> bool& {
+  this->options.push_back ({c, default_value});
 
-  return this->flags.back ().data;
+  return std::get<bool> (this->options.back ().value);
 }
 
 auto
-parser :: int_option (char option, int default_value) -> int& {
-  this->int_options.push_back ({
-    default_value,
-    option,
-  });
+parser :: number_option (char c, int default_value) -> int& {
+  this->options.push_back ({c, default_value});
 
-  return this->int_options.back ().data;
+  return std::get<int> (this->options.back ().value);
 }
 
 auto
-parser :: string_option (char option, std::string_view default_value) -> std::string_view& {
-  this->str_options.push_back ({
-    default_value,
-    option,
-  });
+parser :: string_option (char c, std::string_view default_value) -> std::string_view& {
+  this->options.push_back ({c, default_value});
 
-  return this->str_options.back ().data;
+  return std::get<std::string_view> (this->options.back ().value);
 }
+
+// FIXME: visiting variant without needing helpers
+template<class... Ts>
+struct overloaded : Ts... { using Ts::operator()...; };
+template<class... Ts>
+overloaded(Ts...) -> overloaded<Ts...>;
 
 auto
 parser :: parse (int argc, char** argv) -> void {
@@ -72,51 +67,26 @@ parser :: parse (int argc, char** argv) -> void {
 
       this->inputs.assign (input_n++, arg);
     } else {
-      // FIXME: Less ugly way to do this
+      for (auto& opt: this->options) {
+        if (arg[1] != opt.c)
+          continue;
 
-      bool processed = false;
+        std::visit (overloaded {
+          [&] (bool& toggle) {
+            toggle = !toggle;
+          },
+          [&] (int& number) {
+            assert (i + 1 < argc);
+            number = std::stoi (argv[++i]);
+          },
+          [&] (std::string_view& string) {
+            assert (i + 1 < argc);
+            string = argv[++i];
+          }
+        }, opt.value);
 
-      for (auto& option: this->flags) {
-        if (arg[1] == option.option) {
-          option.data = !option.data;
-
-          processed = true;
-          break;
-        }
+        break;
       }
-
-      if (processed)
-        continue;
-
-      for (auto& option: this->int_options) {
-        if (arg[1] == option.option) {
-          assert (i + 1 < argc);
-
-          std::string_view value = argv[++i];
-          option.data = std::stoi (std::string {value});
-
-          processed = true;
-          break;
-        }
-      }
-
-      if (processed)
-        continue;
-
-      for (auto& option: this->str_options) {
-        if (arg[1] == option.option) {
-          assert (i + 1 < argc);
-
-          std::string_view value = argv[++i];
-          option.data = value;
-
-          processed = true;
-          break;
-        }
-      }
-
-      // Option in none of the lists, invalid
-      assert (processed);
     }
   }
 
