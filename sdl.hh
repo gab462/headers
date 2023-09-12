@@ -47,23 +47,23 @@ enum type {
   total
 };
 
-struct key_pressed {
-  int key;
+struct frame_tick {
+  float dt;
 };
 
 struct clicked {
   int x, y;
 };
 
+struct key_pressed {
+  int key;
+};
+
 struct window_resized {
   int w, h;
 };
 
-struct frame_tick {
-  uint64_t dt;
-};
-
-using data = std::variant<key_pressed, clicked, window_resized, frame_tick>;
+using data = std::variant<frame_tick, clicked, key_pressed, window_resized>;
 
 }
 
@@ -102,7 +102,7 @@ auto
 renderer :: size () -> SDL_Point {
   int w, h;
   SDL_GetRendererOutputSize (this->rend, &w, &h);
-  return { w, h };
+  return {w, h};
 }
 
 auto
@@ -141,14 +141,12 @@ app :: subscribe (event::type type, std::function<void(event::data)> fn) -> void
 
 auto
 app :: loop (std::function<void(renderer&)> render_fn) -> void {
-  uint64_t prev = 0;
-
   auto [w, h] = this->rend.size ();
   for (auto fn: this->fns[event::type::window_resize])
     fn (event::window_resized {w, h});
 
   this->keyboard_state = SDL_GetKeyboardState (NULL);
-
+  uint64_t prev = 0;
   SDL_Event e;
 
   for (;;) {
@@ -180,7 +178,7 @@ app :: loop (std::function<void(renderer&)> render_fn) -> void {
     }
 
     for (auto fn: this->fns[event::type::frame])
-      fn (event::frame_tick {dt});
+      fn (event::frame_tick {static_cast<float> (dt)});
 
     render_fn (this->rend);
 

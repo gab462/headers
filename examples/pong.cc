@@ -49,8 +49,7 @@ main (int argc, char** argv) -> int {
   });
 
   app.subscribe (sdl::event::frame, [&] (sdl::event::data data) -> void {
-    auto ticks = std::get<sdl::event::frame_tick> (data);
-    auto dt = static_cast<float> (ticks.dt);
+    auto [dt] = std::get<sdl::event::frame_tick> (data);
     using sdl::collision;
 
     for (auto& w: walls) {
@@ -78,8 +77,7 @@ main (int argc, char** argv) -> int {
 
   app.subscribe (sdl::event::frame, [&] (sdl::event::data data) -> void {
     // TODO: wrap
-    auto ticks = std::get<sdl::event::frame_tick> (data);
-    auto dt = static_cast<float> (ticks.dt);
+    auto [dt] = std::get<sdl::event::frame_tick> (data);
 
     if (app.keyboard_state[SDL_SCANCODE_A])
       walls[wall::player].data.x -= dt;
