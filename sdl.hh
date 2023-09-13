@@ -16,25 +16,6 @@ enum class collision {
   right
 };
 
-struct rect {
-  SDL_FRect data;
-
-  auto collide (sdl::rect const& other) -> collision;
-};
-
-auto
-rect :: collide (rect const& other) -> collision {
-  SDL_FRect res;
-
-  if (!SDL_IntersectFRect (&this->data, &other.data, &res))
-    return collision::none;
-
-  if (res.w > res.h) // vertical
-    return this->data.y > other.data.y ? collision::down : collision::up;
-  else // horizontal
-    return this->data.x > other.data.x ? collision::left : collision::right;
-}
-
 namespace event {
 
 enum type {
@@ -76,7 +57,7 @@ struct renderer {
 
   auto set_color (uint8_t r, uint8_t g, uint8_t b, uint8_t a) -> void;
   auto clear () -> void;
-  auto draw_rect (rect const& r) -> void;
+  auto draw_rect (SDL_FRect const& r) -> void;
   auto show () -> void;
 };
 
@@ -114,8 +95,8 @@ renderer :: clear () -> void {
 }
 
 auto
-renderer :: draw_rect (rect const& r) -> void {
-  SDL_RenderFillRectF (this->rend, &r.data);
+renderer :: draw_rect (SDL_FRect const& r) -> void {
+  SDL_RenderFillRectF (this->rend, &r);
 }
 
 auto
@@ -189,6 +170,24 @@ event_manager :: loop (renderer& rend, std::function<void(renderer&)> render_fn)
   }
 }
 
-using point = SDL_FPoint;
+struct body {
+  SDL_FRect pos;
+  SDL_FPoint vel;
+
+  auto collide (body const& other) -> collision;
+};
+
+auto
+body :: collide (body const& other) -> collision {
+  SDL_FRect res;
+
+  if (!SDL_IntersectFRect (&this->pos, &other.pos, &res))
+    return collision::none;
+
+  if (res.w > res.h) // vertical
+    return this->pos.y > other.pos.y ? collision::down : collision::up;
+  else // horizontal
+    return this->pos.x > other.pos.x ? collision::left : collision::right;
+}
 
 }
