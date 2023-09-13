@@ -8,14 +8,6 @@
 
 namespace sdl {
 
-enum class collision {
-  none,
-  up,
-  down,
-  left,
-  right
-};
-
 namespace event {
 
 enum type {
@@ -168,26 +160,6 @@ event_manager :: loop (renderer& rend, std::function<void(renderer&)> render_fn)
 
     rend.show ();
   }
-}
-
-struct body {
-  SDL_FRect pos;
-  SDL_FPoint vel;
-
-  auto collide (body const& other) -> collision;
-};
-
-auto
-body :: collide (body const& other) -> collision {
-  SDL_FRect res;
-
-  if (!SDL_IntersectFRect (&this->pos, &other.pos, &res))
-    return collision::none;
-
-  if (res.w > res.h) // vertical
-    return this->pos.y > other.pos.y ? collision::down : collision::up;
-  else // horizontal
-    return this->pos.x > other.pos.x ? collision::left : collision::right;
 }
 
 }

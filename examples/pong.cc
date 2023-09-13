@@ -2,6 +2,34 @@
 
 namespace game {
 
+enum class collision {
+  none,
+  up,
+  down,
+  left,
+  right
+};
+
+struct body {
+  SDL_FRect pos;
+  SDL_FPoint vel;
+
+  auto collide (body const& other) -> collision;
+};
+
+auto
+body :: collide (body const& other) -> collision {
+  SDL_FRect res;
+
+  if (!SDL_IntersectFRect (&this->pos, &other.pos, &res))
+    return collision::none;
+
+  if (res.w > res.h) // vertical
+    return this->pos.y > other.pos.y ? collision::down : collision::up;
+  else // horizontal
+    return this->pos.x > other.pos.x ? collision::left : collision::right;
+}
+
 enum wall {
   player,
   top,
@@ -18,8 +46,8 @@ main (int argc, char** argv) -> int {
   using game::wall;
   sdl::renderer renderer;
   sdl::event_manager app;
-  std::array<sdl::body, wall::total> walls {};
-  sdl::body ball {50, 50, 50, 50, 1, 1};
+  std::array<game::body, wall::total> walls {};
+  game::body ball {50, 50, 50, 50, 1, 1};
 
   for (auto& w: walls) {
     w.pos.w = 10;
@@ -44,7 +72,7 @@ main (int argc, char** argv) -> int {
 
   app.subscribe (sdl::event::frame, [&] (sdl::event::data data) -> void {
     auto [dt] = std::get<sdl::event::frame_tick> (data);
-    using sdl::collision;
+    using game::collision;
 
     for (auto& w: walls) {
       switch (ball.collide (w)) {
