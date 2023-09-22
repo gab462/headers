@@ -1,6 +1,7 @@
 #include <string>
 #include <list>
 #include <variant>
+#include <type_traits>
 #include <cassert>
 
 namespace args {
@@ -49,12 +50,6 @@ parser :: string_option (char c, std::string_view default_value) -> std::string_
   return std::get<std::string_view> (this->options.back ().value);
 }
 
-// FIXME: visiting variant without helpers
-template <class ...Ts>
-struct overloaded: Ts... { using Ts::operator()...; };
-template <class... Ts>
-overloaded (Ts...) -> overloaded<Ts...>;
-
 auto
 parser :: parse (int argc, char** argv) -> void {
   size_t input_n = 0;
@@ -71,17 +66,18 @@ parser :: parse (int argc, char** argv) -> void {
         if (arg[1] != opt.c)
           continue;
 
-        std::visit (overloaded {
-          [&] (bool& toggle) -> void {
-            toggle = !toggle;
-          },
-          [&] (int& number) -> void {
+        std::visit ([&] (auto& val) -> void {
+          using T = std::decay_t<decltype (val)>;
+
+          if constexpr (std::is_same_v<T, bool>) {
+            val = !val;
+          } else {
             assert (i + 1 < argc);
-            number = std::stoi (argv[++i]);
-          },
-          [&] (std::string_view& string) -> void {
-            assert (i + 1 < argc);
-            string = argv[++i];
+
+            if constexpr (std::is_same_v<T, int>)
+              val = std::stoi (argv[++i]);
+            else // (std::is_same_v<T, std::string_view)
+              val = argv[++i];
           }
         }, opt.value);
 
