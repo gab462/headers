@@ -6,24 +6,26 @@
 namespace build {
 
 struct cmd {
-  const char* program;
   std::vector<const char*> args;
 
   cmd ();
-  template <typename ...A> cmd (const char* c, A... a);
+  cmd (std::vector<const char*> argv);
+  template <typename ...A> cmd (A... a);
 
   auto execute () -> void;
 };
 
-cmd :: cmd (): program {nullptr}, args {} {}
+cmd :: cmd (): args {} {}
+
+cmd :: cmd (std::vector<const char*> argv): args {argv} {}
 
 template <typename ...A>
-cmd :: cmd (const char* c, A... a): program {c}, args {c, a..., nullptr} {}
+cmd :: cmd (A... a): args {a..., nullptr} {}
 
 auto
 cmd :: execute () -> void {
   // FIXME: Any way other than const_cast?
-  execvp (program, const_cast<char* const*>(args.data ()));
+  execvp (this->args[0], const_cast<char* const*> (this->args.data ()));
 }
 
 struct config { // Unibuild
@@ -52,58 +54,46 @@ config :: config (const char* file): entry {file} {
 
 auto
 config :: include (std::string_view directory) -> void {
-  includes.push_back (std::string {"-I"}.append (directory));
+  this->includes.push_back (std::string {"-I"}.append (directory));
 }
 
 auto
 config :: link (std::string_view library) -> void {
-  libraries.push_back (std::string {"-l"}.append (library));
+  this->libraries.push_back (std::string {"-l"}.append (library));
 }
 
 auto
 config :: define (std::string_view macro) -> void {
-  macros.push_back (std::string {"-D"}.append (macro));
+  this->macros.push_back (std::string {"-D"}.append (macro));
 }
 
 auto
 config :: run () -> void {
-  std::vector<const char*> v;
+  std::list<const char*> a;
 
-  v.resize (4 // compiler, standard, entry and nullptr
-            + this->flags.size ()
-            + this->includes.size ()
-            + this->libraries.size ()
-            + this->macros.size ());
-
-  size_t i = 0;
-
-  v[i++] = this->compiler;
+  a.push_back (this->compiler);
 
   std::string std = std::string {"-std=c++"}.append (this->standard);
 
-  v[i++] = std.c_str ();
+  a.push_back (std.c_str ());
 
   for (auto const& f: this->flags)
-    v[i++] = f;
+    a.push_back (f);
 
   for (auto const& d: this->includes)
-    v[i++] = d.c_str ();
+    a.push_back (d.c_str ());
 
-  v[i++] = this->entry;
+  a.push_back (this->entry);
 
   for (auto const& l: this->libraries)
-    v[i++] = l.c_str ();
+    a.push_back (l.c_str ());
 
   for (auto const& m: this->macros)
-    v[i++] = m.c_str ();
+    a.push_back (m.c_str ());
 
-  v[i] = nullptr;
+  a.push_back (nullptr);
 
-  cmd c;
-  c.program = this->compiler;
-  c.args.resize (v.size ());
-  c.args = v;
-
+  cmd c {std::vector<const char*> {a.begin (), a.end ()}};
   c.execute ();
 }
 

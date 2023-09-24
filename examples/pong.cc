@@ -107,7 +107,7 @@ main (int argc, char** argv) -> int {
       walls[wall::player].pos.x += dt / 2.0f;
   });
 
-  auto render = [&] (sdl::renderer& r) {
+  auto render = [&] (sdl::renderer& r) -> void {
     r.set_color (255, 255, 255, 255);
     r.clear ();
     r.set_color (255, 0, 0, 255);
